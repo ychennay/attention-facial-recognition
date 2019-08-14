@@ -56,5 +56,9 @@ if __name__ == "__main__":
 
     s3 = boto3.resource('s3')
     faces_bucket = s3.Bucket(S3_BUCKET_NAME)
+
     faces_bucket.upload_file(LOCAL_JSON_FILENAME, f"classification/{LOCAL_JSON_FILENAME}")
+    print(f"Uploaded {LOCAL_JSON_FILENAME}")
+
     faces_bucket.upload_file(easy_json_filename, f"classification/{easy_json_filename}")
+    print(f"Uploaded {easy_json_filename}")

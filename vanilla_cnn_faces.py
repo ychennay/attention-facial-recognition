@@ -23,8 +23,8 @@ from typing import Tuple
 from keras.preprocessing.image import load_img
 import boto3
 
-WIDTH = int(480)
-HEIGHT = int(640)
+WIDTH = int(480/1.5)
+HEIGHT = int(640/1.5)
 
 
 def get_mappings(bucket_name: str, mapping_path: str) -> Dict[str, str]:
@@ -70,14 +70,14 @@ from keras.applications.vgg16 import VGG16
 def build_vgg():
     vgg=VGG16(include_top=False, pooling='avg', weights='imagenet',input_shape=(WIDTH, HEIGHT, 3))
     vgg.summary()
-    for layer in vgg.layers[:-6]:
+    for layer in vgg.layers[:-5]:
         layer.trainable = False
     model = models.Sequential()
     model.add(vgg)
-    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(128, activation='relu'))
     model.add(layers.BatchNormalization())
     model.add(layers.Dense(2, activation="softmax"))
-    model.compile(optimizer=Adam(lr=0.0001), loss="binary_crossentropy", metrics=['accuracy'])
+    model.compile(optimizer=Adam(lr=0.000001), loss="binary_crossentropy", metrics=['accuracy'])
     return model
 
 if __name__ == "__main__":
@@ -163,4 +163,6 @@ if __name__ == "__main__":
     model: Model = build_vanilla_cnn(32, 16, 4, input_dims)
     model = build_vgg()
     RUN_VANILLA = True  # set this to True to actually run the model
-    history: History = model.fit(images, encoded_target, validation_split=0.3, verbose=1, epochs=100, shuffle=True, batch_size=16)
+    history: History = model.fit(images, encoded_target, validation_split=0.3, verbose=1, epochs=30, shuffle=True, batch_size=64)
+    saved_model_relative_path: str = os.path.join("saved_models", "faces_vgg.h5")
+    model.save(saved_model_relative_path)

@@ -1,4 +1,5 @@
 from keras.callbacks import History
+from keras import models, layers
 
 import json
 from tensorflow.python.framework.ops import Tensor
@@ -20,6 +21,9 @@ import logging
 from typing import Tuple
 from keras.preprocessing.image import load_img
 import boto3
+
+WIDTH = 480
+HEIGHT = 640
 
 
 def get_mappings(bucket_name: str, mapping_path: str) -> Dict[str, str]:
@@ -60,6 +64,21 @@ def build_vanilla_cnn(filters_layer1: int, filters_layer2: int, kernel_size: int
     return model
 
 
+from keras.applications.vgg16 import VGG16
+
+def build_vgg():
+    vgg=VGG16(include_top=False, pooling='avg', weights='imagenet',input_shape=(WIDTH, HEIGHT, 3))
+    vgg.summary()
+    for layer in vgg.layers[:-5]:
+        layer.trainable = False
+    model = models.Sequential()
+    model.add(vgg)
+    model.add(layers.Dense(256, activation='relu'))
+    model.add(layers.BatchNormalization())
+    model.add(layers.Dense(2, activation="softmax"))
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=['accuracy'])
+    return model
+
 if __name__ == "__main__":
     cwd = os.getcwd()
     warnings.filterwarnings('ignore')
@@ -92,16 +111,16 @@ if __name__ == "__main__":
 
             # use the Keras image API to load in an image
             img = load_img(local_filename)
-            img = img.convert('L')  # convert to gray scale
+            #img = img.convert('L')  # convert to gray scale
             # report details about the image
             images.append(np.array(img))
             target.append(gender)
             if len(images) == IMAGE_LIMIT:
                 print("Breaking after reaching image limit.")
                 break
-        except Exception:
-            print(f"Error downloading {filename}")
-
+        except Exception as e:
+            print(f"{e}:Error downloading {filename}")
+	
     binary_target = np.array(list(map(lambda gender: 0 if gender == 'male' else 1, target)))
     encoded_target = to_categorical(binary_target)
 
@@ -110,7 +129,7 @@ if __name__ == "__main__":
     print(f"There are {NUM_CLASSSES} classes to predict.")
 
     indices = np.linspace(0, len(binary_target) - 1, len(binary_target))
-    validation_indices = np.random.choice(indices, size=int(len(binary_target) * 0.15), replace=False).astype(int)
+    validation_indices = np.random.choice(indices, size=int(len(binary_target) * 0.3), replace=False).astype(int)
     training_indices = set(indices).difference(set(validation_indices))
     training_indices = np.array(list(training_indices)).astype(int)
 
@@ -122,8 +141,10 @@ if __name__ == "__main__":
     images: np.ndarray = np.array(images)
     X_train = images[training_indices]
     y_train = binary_target[training_indices]
+    y_train = encoded_target[training_indices]
     X_test = images[validation_indices]
     y_test = binary_target[validation_indices]
+    y_test = encoded_target[validation_indices]
     X_train_expanded: np.ndarray = expand_tensor_shape(X_train)
     X_test_expanded: np.ndarray = expand_tensor_shape(X_test)
     images_expanded = expand_tensor_shape(images)
@@ -135,8 +156,8 @@ if __name__ == "__main__":
     print(f"The shape of X_test is {X_test.shape}")
     print(f"The shape of y_test is {y_test.shape} - some example targets:\n {y_test[:5]}")
 
-    input_dims = (480, 640, 1)
+    input_dims = (WIDTH, HEIGHT, 1)
     model: Model = build_vanilla_cnn(32, 16, 4, input_dims)
+    model = build_vgg()
     RUN_VANILLA = True  # set this to True to actually run the model
-    if RUN_VANILLA:
-        history: History = model.fit(X_train_expanded, y_train, epochs=10, batch_size=16)
+    history: History = model.fit(X_train, y_train, validation_data=(X_test, y_test), verbose=1, epochs=100, batch_size=16)

@@ -77,7 +77,7 @@ def build_vgg():
     model.add(layers.Dense(128, activation='relu'))
     model.add(layers.BatchNormalization())
     model.add(layers.Dense(2, activation="softmax"))
-    model.compile(optimizer=Adam(lr=0.000001), loss="binary_crossentropy", metrics=['accuracy'])
+    model.compile(optimizer=Adam(lr=0.00001), loss="binary_crossentropy", metrics=['accuracy'])
     return model
 
 if __name__ == "__main__":
@@ -163,6 +163,6 @@ if __name__ == "__main__":
     model: Model = build_vanilla_cnn(32, 16, 4, input_dims)
     model = build_vgg()
     RUN_VANILLA = True  # set this to True to actually run the model
-    history: History = model.fit(images, encoded_target, validation_split=0.3, verbose=1, epochs=30, shuffle=True, batch_size=64)
+    history: History = model.fit(images, encoded_target, validation_split=0.3, verbose=1, epochs=5, shuffle=True, batch_size=128)
     saved_model_relative_path: str = os.path.join("saved_models", "faces_vgg.h5")
     model.save(saved_model_relative_path)

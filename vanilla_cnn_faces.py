@@ -23,8 +23,8 @@ from typing import Tuple
 from keras.preprocessing.image import load_img
 import boto3
 
-WIDTH = int(480/1.5)
-HEIGHT = int(640/1.5)
+WIDTH = int(480/2)
+HEIGHT = int(640/2)
 
 
 def get_mappings(bucket_name: str, mapping_path: str) -> Dict[str, str]:
